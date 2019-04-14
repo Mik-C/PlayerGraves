@@ -1,22 +1,27 @@
 package es.mcers.Mik_C.PlayerGraves;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
 
 import java.util.Date;
-import java.util.UUID;
 
 public class Grave {
-    private String owner;
-    private Date createdAt;
-    private Location location;
-    private Inventory inventory;
+    public String owner;
+    public String ownerName;
+    public Date createdAt;
+    public long expires;
+    public Location location;
+    public Inventory inventory;
 
     public Grave(Player player){
         owner = player.getUniqueId().toString();
+        ownerName = player.getDisplayName();
         createdAt = new Date();
+        expires = createdAt.getTime() + (1000*60*30);
         location = player.getLocation();
         inventory = PlayerGraves.server.createInventory(null, 54, ChatColor.DARK_RED+"Tumba de "+player.getDisplayName());
         inventory.setContents(player.getInventory().getContents());
@@ -30,26 +35,57 @@ public class Grave {
         return true;
     }
 
-    public String getOwner(){
-        return owner;
+    public long remainingTime(){
+        Date now = new Date();
+        return expires - now.getTime();
     }
 
-    public Location getLocation(){
-        return location;
+    public String remainingTimeString(){
+        long diff = remainingTime();
+
+        long seconds = diff / 1000;
+
+        return "" + seconds/60 + ":" + seconds%60 + " minutos";
     }
 
-    public Inventory getInventory(){
-        return inventory;
+    public String locationString(){
+        return "( " + location.getBlockX() + " " + location.getBlockY() + " " + location.getBlockZ() + " )";
     }
 
     public boolean isEmpty(){
-        return inventory.getContents().length == 0;
+        return PlayerGraves.isEmpty(inventory);
+    }
+
+    public boolean isThisInventory(Inventory i){
+        return inventory.hashCode() == i.hashCode();
     }
 
     public String toString(){
-        String s = "";
-        s += location.toString();
+        return locationString() + " === " + remainingTimeString();
+    }
 
-        return s;
+    public void drop(){
+        Chunk chunk = location.getChunk();
+        boolean isLoaded = chunk.isLoaded();
+
+        //Load grave chunk
+        if(!isLoaded){
+            chunk.load();
+        }
+
+        //Spawn items in world
+        for(ItemStack is : inventory.getContents()){
+            location.getWorld().dropItemNaturally(location, is);
+        }
+        inventory.clear();
+
+        //Unload chunk (if no player near!)
+        if(!isLoaded){
+            chunk.unload(true);
+        }
+    }
+
+    public void openInventory(Player p){
+        p.openInventory(inventory);
     }
 }
