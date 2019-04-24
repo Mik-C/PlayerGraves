@@ -80,6 +80,7 @@ public class PlayerGraves extends JavaPlugin {
                 Grave g = new Grave(gravesYaml.getConfigurationSection(uuid+"."+i));
                 if(g.remainingTime() > 0){
                     playerGraves.add(g);
+                    new DeleteGraveTask(g).runTaskLater(instance, g.remainingTime());
                 }else{
                     g.drop();
                 }
